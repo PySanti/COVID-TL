@@ -4,4 +4,6 @@ El objetivo de este proyecto sera utilizar un modelo basado en cnn (convolutiona
 
 El [dataset](https://www.kaggle.com/datasets/andyczhao/covidx-cxr2) a utilizar contiene ~85k imagenes de rayos x de pechos de pacientes con y sin covid-19.
 
-# Carga del dataset
+# Informacion de dataset:
+
+Segun el link dispuesto 
