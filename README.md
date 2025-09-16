@@ -16,7 +16,7 @@ Las imagenes son del siguiente tipo:
 ![title](./images/muestra_2.png)
 ![title](./images/muestra_3.png)
 
-Es importante destacar que *no todas las imagenes tienen la misma resolucion*. Lo anterior implica agregar tecnicas de Resizing previo al entrenamiento.
+Es importante destacar que *las imagenes no tienen una resolucion estandar*. Lo anterior implica agregar tecnicas de Resizing previo al entrenamiento.
 
 
 
