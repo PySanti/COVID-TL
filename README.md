@@ -6,4 +6,18 @@ El [dataset](https://www.kaggle.com/datasets/andyczhao/covidx-cxr2) a utilizar c
 
 # Informacion de dataset:
 
-Segun el link dispuesto 
+Segun el link dispuesto, tenemos la siguiente informacion del dataset.
+
+![Distribucion de data](./images/data_dist.png)
+
+Las imagenes son del siguiente tipo:
+
+![title](./images/muestra_1.png)
+![title](./images/muestra_2.png)
+![title](./images/muestra_3.png)
+
+Es importante destacar que *no todas las imagenes tienen la misma resolucion*. Lo anterior implica agregar tecnicas de Resizing previo al entrenamiento.
+
+
+
+
