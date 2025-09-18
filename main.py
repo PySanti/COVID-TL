@@ -1,4 +1,5 @@
 import kagglehub
+import time
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -10,6 +11,8 @@ from utils.ImagesDataset import ImagesDataset
 from torchvision import transforms
 from utils.MACROS import BATCH_SIZE, EPOCHS, IMAGE_SIZE, MEANS, STDS
 import torchvision
+
+from utils.plot_model_performance import plot_model_performance
 
 if __name__ == "__main__":
 
@@ -48,15 +51,19 @@ if __name__ == "__main__":
     testset = ImagesDataset(*load_dataset('test', data_path), val_transformer)
 
 
-    trainloader = DataLoader(trainset, BATCH_SIZE, shuffle=True, num_workers=12, persistent_workers=True, pin_memory=True)
-    valloader = DataLoader(valset, BATCH_SIZE, shuffle=False, num_workers=5, persistent_workers=True, pin_memory=True)
+    trainloader = DataLoader(trainset, BATCH_SIZE, shuffle=True, num_workers=8, persistent_workers=True, pin_memory=True)
+    valloader = DataLoader(valset, BATCH_SIZE, shuffle=False, num_workers=4, persistent_workers=True, pin_memory=True)
 
     model = load_model(2).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
     criterion = torch.nn.CrossEntropyLoss()
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max",patience=8)
 
+    epochs_train_loss = []
+    epochs_val_loss = []
+
     for i in range(EPOCHS):
+        t1 = time.time()
 
         batches_train_loss = []
         batches_val_loss = []
@@ -100,8 +107,15 @@ if __name__ == "__main__":
                     Train loss: {np.mean(batches_train_loss)}
                     Val loss: {np.mean(batches_val_loss)}
                     Val precision : {np.mean(batches_val_prec)}
+                    Time : {time.time()-t1}
+
+                    ___________________________________________
         """)
 
+        epochs_train_loss.append(np.mean(batches_train_loss))
+        epochs_val_loss.append(np.mean(batches_val_loss))
+
         scheduler.step(np.mean(batches_val_prec))
-
-
+    torch.save(model, "./results/resnet/resnet18.pt")
+    torch.save(torch.Tensor(epochs_val_loss), "./results/resnet/epochs_loss.pt")
+    plot_model_performance(epochs_train_loss, epochs_val_loss)

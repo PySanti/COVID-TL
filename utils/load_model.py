@@ -9,5 +9,5 @@ def load_model(num_class):
         param.requires_grad = False
 
     num_features = model.fc.in_features
-    model.fc = torch.nn.Linear(num_features, 2)  # 2 clases: COVID / No-COVID
+    model.fc = torch.nn.Linear(num_features, num_class)  # 2 clases: COVID / No-COVID
     return model
