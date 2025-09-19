@@ -3,14 +3,11 @@ import time
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from utils.NormDataset import NormDataset
 from utils.load_dataset import load_dataset
 from utils.load_model import load_model
-from utils.normalization_metrics_calc import normalization_metrics_calc
 from utils.ImagesDataset import ImagesDataset
 from torchvision import transforms
 from utils.MACROS import BATCH_SIZE, EPOCHS, IMAGE_SIZE, MEANS, STDS
-import torchvision
 
 from utils.plot_model_performance import plot_model_performance
 
@@ -116,6 +113,6 @@ if __name__ == "__main__":
         epochs_val_loss.append(np.mean(batches_val_loss))
 
         scheduler.step(np.mean(batches_val_prec))
-    torch.save(model, "./results/resnet/resnet18.pt")
-    torch.save(torch.Tensor(epochs_val_loss), "./results/resnet/epochs_loss.pt")
+    torch.save(model, "./results/efficientnet/efficientnetb7.pt")
+    torch.save(torch.Tensor(epochs_val_loss), "./results/efficientnet/epochs_loss.pt")
     plot_model_performance(epochs_train_loss, epochs_val_loss)
