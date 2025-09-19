@@ -1,1 +1,3 @@
 dep/
+results/resnet/resnet18.pt
+results/efficientnet/epochs_loss.pt

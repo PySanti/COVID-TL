@@ -5,9 +5,9 @@ import torch
 def load_model(num_class):
     model = torchvision.models.squeezenet1_1(weights=torchvision.models.SqueezeNet1_1_Weights.DEFAULT)
 
-    for param in model.parameters():
-        param.requires_grad = False
+#    for param in model.parameters():
+#        param.requires_grad = False
 
-    num_features = model.classifier[1].in_features
-    model.classifier[1] = torch.nn.Linear(num_features, num_class)  # 2 clases: COVID / No-COVID
+    model.classifier[1] = torch.nn.Conv2d(512, 2, kernel_size=(1,1), stride=(1,1))
+    model.num_classes = 2
     return model
