@@ -3,7 +3,7 @@ from torchvision.models import  resnet18
 import torch
 
 def load_model(num_class):
-    model = torchvision.models.efficientnet_b7(weights=torchvision.models.EfficientNet_B7_Weights.DEFAULT)
+    model = torchvision.models.squeezenet1_1(weights=torchvision.models.SqueezeNet1_1_Weights.DEFAULT)
 
     for param in model.parameters():
         param.requires_grad = False
