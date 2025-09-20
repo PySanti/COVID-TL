@@ -1,38 +1,42 @@
+
+
 # COVID-TL
 
-El objetivo de este proyecto sera utilizar un modelo basado en cnn (convolutional neural network) aplicando transfer learning para la deteccion de COVID-19 en imagenes de rayos X de pechos de pacientes con y sin COVID-19.
+El objetivo de este proyecto será utilizar un modelo basado en cnn (convolutional neural network) aplicando transfer learning para la detección de COVID-19 en imágenes de rayos X de pechos de pacientes con y sin COVID-19.
 
-El [dataset](https://www.kaggle.com/datasets/andyczhao/covidx-cxr2) a utilizar contiene ~85k imagenes de rayos x de pechos de pacientes con y sin covid-19.
+El [dataset](https://www.kaggle.com/datasets/andyczhao/covidx-cxr2) a utilizar contiene ~85k imágenes de rayos x de pechos de pacientes con y sin covid-19.
 
-# Informacion de dataset:
+# Información de dataset:
 
-Segun el link dispuesto, tenemos la siguiente informacion del dataset.
+Según el link dispuesto, tenemos la siguiente información del dataset.
 
 ![Distribucion de data](./images/data_dist.png)
 
-Las imagenes son del siguiente tipo:
+Las imágenes son del siguiente tipo:
 
 ![title](./images/muestra_1.png)
 ![title](./images/muestra_2.png)
 ![title](./images/muestra_3.png)
 
-Es importante destacar que *las imagenes no tienen una resolucion estandar*. Lo anterior implica agregar tecnicas de Resizing previo al entrenamiento.
+Es importante destacar que *las imagenes no tienen una resolución estándar*. Lo anterior implica agregar técnicas de Resizing previo al entrenamiento.
 
 
 
-# Carga de rutas de imagenes
+# Carga de rutas de imágenes
 
-A traves de la siguiente funcion se crearon los datasets que almacenaran las rutas de las imagenes que se usaran para entrenamiento:
+A través de la siguiente función se crearon los datasets que almacenarán las rutas de las imágenes que se usarán para entrenamiento:
 
 ```python
+
+# utils/load_dataset.py
 
 import os
 
 def load_dataset(type_, data_path):
     """
-        Funcion creada para generar los paths_sets
-        de las imagenes teniendo en cuenta la estructura
-        de almacenamiento de las imagenes:
+        Función creada para generar los paths_sets
+        de las imágenes teniendo en cuenta la estructura
+        de almacenamiento de las imágenes:
         o
 
     {data_path} 
@@ -61,16 +65,18 @@ def load_dataset(type_, data_path):
     return X, Y
 
 ```
-# Obtencion de metricas para normalizar
+# Obtención de métricas para normalizar
 
 Para poder normalizar un conjunto de datos (necesario para el entrenamiento de redes neuronales)
-se deben encontrar dos metricas: media y desviacion estandar.
+se deben encontrar dos matrices: media y desviación estándar.
 
-Estas dos metricas se obtienen del conjunto de imagenes de entrenamiento por cada canal.
+Estas dos métricas se obtienen del conjunto de imágenes de entrenamiento por cada canal.
 
-Para lograrlo, utilizamos la siguiente funcion:
+Para lograrlo, utilizamos la siguiente función:
 
 ```python
+
+# utils/normalization_metrics_calc.py
 
 import numpy as np
 from torch.utils.data import DataLoader
@@ -100,9 +106,11 @@ def normalization_metrics_calc(dataset):
     return mean.tolist(), std.tolist()
 ```
 
-Esta funcion toma un dataset que wrappea la lista de rutas de imagenes y lo recorre, dicho dataset es el siguiente:
+Esta función toma un dataset que wrappea la lista de rutas de imágenes y lo recorre, dicho dataset es el siguiente:
 
 ```python
+
+# utils/NormDataset.py
 
 from torchvision import transforms
 import numpy as np
@@ -112,8 +120,8 @@ import torch
 class NormDataset(torch.utils.data.Dataset):
     """
         Dataset creado para wrappear los
-        paths_sets para encontrar los valores de normalizacion
-        en el trainset (media y desviacion estandar por canal)
+        paths_sets para encontrar los valores de normalización
+        en el trainset (media y desviación estándar por canal)
     """
 
     def __init__(self, X) -> None:
@@ -133,6 +141,8 @@ class NormDataset(torch.utils.data.Dataset):
 En el `main.py`:
 
 ```python
+
+# main.py
 
 import kagglehub
 from utils.NormDataset import NormDataset
@@ -161,9 +171,11 @@ std : [0.24806341486746794, 0.24806204203020304, 0.248068391383844]
 
 # Esqueleto de entrenamiento
 
-Usando el siguiente codigo, se hicieron las primeras pruebas:
+Usando el siguiente código, se hicieron las primeras pruebas:
 
 ```python
+
+# main.py
 
 import kagglehub
 import numpy as np
@@ -190,7 +202,7 @@ if __name__ == "__main__":
         transforms.Resize((256, 256)), # redimensionar 
         transforms.CenterCrop((224, 224)), # recordar desde el centro para consistencia
         
-        # data aumentation
+        # data augmentation
 
         transforms.RandomHorizontalFlip(),
         transforms.ColorJitter(0.4, 0.4, 0.4, 0.1),
@@ -245,13 +257,13 @@ if __name__ == "__main__":
 
 ```
 
-# Implementacion de procesamiento de valset
+# Implementación de procesamiento de valset
 
-Se implemento el procesamiento del valset para revisar el rendimiento del modelo en validacion:
+Se implementó el procesamiento del valset para revisar el rendimiento del modelo en validación:
 
 ```python
 
-# utils/main.py
+# main.py
 
 import kagglehub
 import numpy as np
@@ -359,15 +371,17 @@ if __name__ == "__main__":
 
 ```
 
-# Implementacion de LR Scheduling y Weight Decay
+# Implementación de LR Scheduling y Weight Decay
 
 ```python
+
+    # main.py
     
     ...
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
     criterion = torch.nn.CrossEntropyLoss()
-    # cada 8 epocas se revisa si la precision en validacion mejoro para ver si se disminuye el lr
+    # cada 8 epocas se revisa si la precisión en validacion mejoro para ver si se disminuye el lr
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max",patience=8)
 
     ...
@@ -393,9 +407,11 @@ if __name__ == "__main__":
 
 # Session 1: performance de resnet18.
 
-Usando el siguiente codigo:
+Usando el siguiente código:
 
 ```python
+
+# main.py
 
 import kagglehub
 import time
@@ -522,6 +538,8 @@ if __name__ == "__main__":
 
 ```python
 
+# utils/load_model.py
+
 import torchvision
 from torchvision.models import  resnet18
 import torch
@@ -556,9 +574,9 @@ Obtuve los siguientes resultados:
 
 # Session 2: performance de SqueezeNet
 
-Cabe destacar que esta vez se hizo fine-tunnig sobre toda la red, no tan solo sobre las capas de clasificacion:
+Cabe destacar que esta vez se hizo fine-tunnig sobre toda la red, no tan solo sobre las capas de clasificación:
 
-Usando el siguiente codigo:
+Usando el siguiente código:
 
 ```python
 
@@ -685,7 +703,7 @@ if __name__ == "__main__":
 
 ```
 
-```
+```python
 # utils/load_model.py
 
 
@@ -721,3 +739,4 @@ Se obtuvieron los siguientes resultados:
 ```
 
 ![SQ performace](./images/sq_performance.png)
+
