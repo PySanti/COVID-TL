@@ -1,3 +1,4 @@
 *.pt filter=lfs diff=lfs merge=lfs -text
 results/efficientnet/efficientnetb7.pt filter=lfs diff=lfs merge=lfs -text
 results/resnet/resnet18.pt filter=lfs diff=lfs merge=lfs -text
+results/*/* filter=lfs diff=lfs merge=lfs -text
