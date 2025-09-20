@@ -554,7 +554,9 @@ Obtuve los siguientes resultados:
 ![Resnet18 performance](./images/resnet_performance.png)
 
 
-# Session 2: performance de Efficientnetb7
+# Session 2: performance de SqueezeNet
+
+Cabe destacar que esta vez se hizo fine-tunnig sobre toda la red, no tan solo sobre las capas de clasificacion:
 
 Usando el siguiente codigo:
 
@@ -613,7 +615,7 @@ if __name__ == "__main__":
 
 
     trainloader = DataLoader(trainset, BATCH_SIZE, shuffle=True, num_workers=8, persistent_workers=True, pin_memory=True)
-    valloader = DataLoader(valset, BATCH_SIZE, shuffle=False, num_workers=4, persistent_workers=True, pin_memory=True)
+    valloader = DataLoader(valset, BATCH_SIZE, shuffle=False, num_workers=8, persistent_workers=True, pin_memory=True)
 
     model = load_model(2).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
@@ -632,7 +634,7 @@ if __name__ == "__main__":
         
         model.train()
         for a, (X_batch, Y_batch) in enumerate(trainloader):
-            print(f"train batch : {a}/{len(trainloader)}", end="\r")
+            print(f"\t\ttrain batch : {a}/{len(trainloader)}", end="\r")
             X_batch, Y_batch = X_batch.to(DEVICE), Y_batch.to(DEVICE)
 
             optimizer.zero_grad()
@@ -645,13 +647,12 @@ if __name__ == "__main__":
 
             batches_train_loss.append(loss.item())
 
-        print("\n\n")
-
+        print("")
         model.eval()
 
         with torch.no_grad():
             for a, (X_batch, Y_batch) in enumerate(valloader):
-                print(f"val batch : {a}/{len(valloader)}", end="\r")
+                print(f"\t\tval batch : {a}/{len(valloader)}", end="\r")
                 X_batch, Y_batch = X_batch.to(DEVICE), Y_batch.to(DEVICE)
 
                 output = model(X_batch)
@@ -665,10 +666,10 @@ if __name__ == "__main__":
         print(f"""
                 Epoch : {i+1}/{EPOCHS}
 
-                    Train loss: {np.mean(batches_train_loss)}
-                    Val loss: {np.mean(batches_val_loss)}
-                    Val precision : {np.mean(batches_val_prec)}
-                    Time : {time.time()-t1}
+                    Train loss: {np.mean(batches_train_loss):.4f}
+                    Val loss: {np.mean(batches_val_loss):.4f}
+                    Val precision : {np.mean(batches_val_prec):.4f}
+                    Time : {time.time()-t1:.4f}
 
                     ___________________________________________
         """)
@@ -677,14 +678,14 @@ if __name__ == "__main__":
         epochs_val_loss.append(np.mean(batches_val_loss))
 
         scheduler.step(np.mean(batches_val_prec))
-    torch.save(model, "./results/efficientnet/efficientnetb7.pt")
-    torch.save(torch.Tensor(epochs_val_loss), "./results/efficientnet/epochs_loss.pt")
+    torch.save(model, "./results/se_net/se_net.pt")
+    torch.save(torch.Tensor(epochs_val_loss), "./results/se_net/epochs_loss.pt")
     plot_model_performance(epochs_train_loss, epochs_val_loss)
+
+
 ```
 
-
-```python
-
+```
 # utils/load_model.py
 
 
@@ -693,25 +694,30 @@ from torchvision.models import  resnet18
 import torch
 
 def load_model(num_class):
-    model = torchvision.models.efficientnet_b7(weights=torchvision.models.EfficientNet_B7_Weights.DEFAULT)
+    model = torchvision.models.squeezenet1_1(weights=torchvision.models.SqueezeNet1_1_Weights.DEFAULT)
 
-    for param in model.parameters():
-        param.requires_grad = False
+#    for param in model.parameters():
+#        param.requires_grad = False
 
-    num_features = model.classifier[1].in_features
-    model.classifier[1] = torch.nn.Linear(num_features, num_class)  # 2 clases: COVID / No-COVID
+    model.classifier[1] = torch.nn.Conv2d(512, 2, kernel_size=(1,1), stride=(1,1))
+    model.num_classes = 2
     return model
-```
-
-Obtuve los siguientes resultados:
 
 ```
+
+Se obtuvieron los siguientes resultados:
+
+```
+                train batch : 530/531
+                val batch : 66/67
                 Epoch : 50/50
 
-                    Train loss: 0.3348933940441146
-                    Val loss: 0.48090040917272
-                    Val precision : 0.772555947303772
-                    Time : 252.57783889770508
+                    Train loss: 0.0778
+                    Val loss: 0.1941
+                    Val precision : 0.9479
+                    Time : 90.3727
+
+                    ___________________________________________
 ```
 
-![Efficientnetb7 performance](./images/efficientnet_performance.png)
+![SQ performace](./images/sq_performance.png)
