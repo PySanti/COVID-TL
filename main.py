@@ -1,3 +1,4 @@
+from numpy.matrixlib import test
 import pandas as pd
 import kagglehub
 import time
@@ -55,93 +56,82 @@ if __name__ == "__main__":
     valloader = DataLoader(valset, BATCH_SIZE, shuffle=False, num_workers=5, persistent_workers=True, pin_memory=True)
     testloader = DataLoader(testset, BATCH_SIZE, shuffle=False, num_workers=5, persistent_workers=True, pin_memory=True)
 
+    model = load_model(2).to(DEVICE)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
+    criterion = torch.nn.CrossEntropyLoss()
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max",patience=8)
 
-    try:
-        model = torch.load("./results/se_net/se_net.pt", weights_only=False).to(DEVICE)
-    except Exception as e:
-        print(e)
-        model = None
+    epochs_train_loss = []
+    epochs_val_loss = []
 
-    if not model:
+    for i in range(EPOCHS):
+        t1 = time.time()
 
-        print("Iniciando entrenamiento del modelo")
-        model = load_model(2).to(DEVICE)
-        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
-        criterion = torch.nn.CrossEntropyLoss()
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max",patience=8)
+        batches_train_loss = []
+        batches_val_loss = []
+        batches_val_prec =[]
+        batches_test_prec =[]
+        
+        model.train()
+        for a, (X_batch, Y_batch) in enumerate(trainloader):
+            print(f"\t\ttrain batch : {a}/{len(trainloader)}", end="\r")
+            X_batch, Y_batch = X_batch.to(DEVICE), Y_batch.to(DEVICE)
 
-        epochs_train_loss = []
-        epochs_val_loss = []
+            optimizer.zero_grad()
 
-        for i in range(EPOCHS):
-            t1 = time.time()
+            output = model(X_batch)
+            loss = criterion(output, Y_batch)
+            loss.backward()
+            optimizer.step()
 
-            batches_train_loss = []
-            batches_val_loss = []
-            batches_val_prec =[]
-            
-            model.train()
-            for a, (X_batch, Y_batch) in enumerate(trainloader):
-                print(f"\t\ttrain batch : {a}/{len(trainloader)}", end="\r")
+
+            batches_train_loss.append(loss.item())
+
+        print()
+        model.eval()
+
+        with torch.no_grad():
+
+            # validation
+
+            for a, (X_batch, Y_batch) in enumerate(valloader):
+                print(f"\t\tval batch : {a}/{len(valloader)}", end="\r")
                 X_batch, Y_batch = X_batch.to(DEVICE), Y_batch.to(DEVICE)
-
-                optimizer.zero_grad()
 
                 output = model(X_batch)
                 loss = criterion(output, Y_batch)
-                loss.backward()
-                optimizer.step()
-
-
-                batches_train_loss.append(loss.item())
-
+                
+                batches_val_loss.append(loss.item())
+                batches_val_prec.append(precision(output, Y_batch))
+            
             print()
-            model.eval()
+            # test
 
-            with torch.no_grad():
-                for a, (X_batch, Y_batch) in enumerate(valloader):
-                    print(f"\t\tval batch : {a}/{len(valloader)}", end="\r")
-                    X_batch, Y_batch = X_batch.to(DEVICE), Y_batch.to(DEVICE)
-
-                    output = model(X_batch)
-                    loss = criterion(output, Y_batch)
-                    
-                    batches_val_loss.append(loss.item())
-                    batches_val_prec.append(precision(output, Y_batch))
-
-            print(f"""
-                    Epoch : {i+1}/{EPOCHS}
-
-                        Train loss: {np.mean(batches_train_loss):.4f}
-                        Val loss: {np.mean(batches_val_loss):.4f}
-                        Val precision : {np.mean(batches_val_prec):.4f}
-                        Time : {time.time()-t1:.4f}
-
-                        ___________________________________________
-            """)
-
-            epochs_train_loss.append(np.mean(batches_train_loss))
-            epochs_val_loss.append(np.mean(batches_val_loss))
-
-            scheduler.step(np.mean(batches_val_prec))
-        torch.save(model, "./results/se_net/se_net.pt")
-        torch.save(torch.Tensor(epochs_val_loss), "./results/se_net/epochs_loss.pt")
-        plot_model_performance(epochs_train_loss, epochs_val_loss)
-
-    else:
-
-        # evaluacion del modelo en test
-
-        print("Probando modelo en fase de test")
-
-        model.eval()
-        with torch.no_grad():
-            prec_list = []
-            for i, (X_batch, Y_batch) in enumerate(testloader):
-
+            for a, (X_batch, Y_batch) in enumerate(testloader):
+                print(f"\t\ttest batch : {a}/{len(testloader)}", end="\r")
                 X_batch, Y_batch = X_batch.to(DEVICE), Y_batch.to(DEVICE)
                 
                 output = model(X_batch)
-                prec_list.append(precision(output, Y_batch))
+                batches_test_prec.append(precision(output, Y_batch))
 
-            print(np.mean(prec_list))
+        print(f"""
+                Epoch : {i+1}/{EPOCHS}
+
+                    Train loss: {np.mean(batches_train_loss):.4f}
+                    Val loss: {np.mean(batches_val_loss):.4f}
+                    Val precision : {np.mean(batches_val_prec):.4f}
+                    Test precision : {np.mean(batches_test_prec):.4f}
+                    Time : {time.time()-t1:.4f}
+
+                    ___________________________________________
+        """)
+
+        epochs_train_loss.append(np.mean(batches_train_loss))
+        epochs_val_loss.append(np.mean(batches_val_loss))
+
+        scheduler.step(np.mean(batches_val_prec))
+    torch.save(model, "./results/se_net/se_net.pt")
+    torch.save(torch.Tensor(epochs_val_loss), "./results/se_net/epochs_loss.pt")
+    plot_model_performance(epochs_train_loss, epochs_val_loss)
+
+
