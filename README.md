@@ -786,3 +786,79 @@ plt.show()
 Obtuve los siguientes resultados:
 
 ![ResNet18 vs SENet](./images/se_vs_resnet.png)
+
+# Session 4: SENet en test.
+
+El modelo anterior da 52% de precision en test, esto es un problema.
+
+Despues de revisar algunas cosas me di cuenta de que el modelo daba muy malas predicciones en test para la clase negativa y muy buenas para la clase positiva. Para revisar lo anterior use el siguiente codigo:
+
+
+```python
+
+# utils/get_target_batch_dist.py
+
+import pandas as pd
+from torch import dist
+
+def get_target_batch_dist(Y_batch):
+    dists = {}
+    for k,v in pd.Series(Y_batch.cpu()).value_counts().items():
+        dists[k] = v/len(Y_batch)*100
+    return dists
+
+```
+
+La funcion anterior fue llamada en el bucle de batches al recorrer el testloader, es decir, a continuacion se muestra la precision del modelo por batch y la distribucion de targets para ese batch:
+
+```
+Precision : 1.0, distributions : {1: 100.0}
+Precision : 0.9921875, distributions : {1: 100.0}
+Precision : 1.0, distributions : {1: 100.0}
+Precision : 1.0, distributions : {1: 100.0}
+Precision : 0.9921875, distributions : {1: 100.0}
+Precision : 0.9921875, distributions : {1: 100.0}
+Precision : 0.984375, distributions : {1: 100.0}
+Precision : 1.0, distributions : {1: 100.0}
+Precision : 0.96875, distributions : {0: 86.71875, 1: 13.28125}
+Precision : 0.6953125, distributions : {0: 100.0}
+Precision : 0.0625, distributions : {0: 100.0}
+Precision : 0.078125, distributions : {0: 100.0}
+Precision : 0.109375, distributions : {0: 100.0}
+Precision : 0.0625, distributions : {0: 100.0}
+Precision : 0.0390625, distributions : {0: 100.0}
+Precision : 0.0234375, distributions : {0: 100.0}
+Precision : 0.0078125, distributions : {0: 100.0}
+Precision : 0.015625, distributions : {0: 100.0}
+Precision : 0.03125, distributions : {0: 100.0}
+Precision : 0.015625, distributions : {0: 100.0}
+```
+
+
+
+
+El codigo anterior tambien fue probado en el conjunto de test, consiguiendo el siguiente resultado:
+
+
+```
+Precision : 0.984375, distributions : {1: 100.0}
+Precision : 0.984375, distributions : {1: 100.0}
+Precision : 1.0, distributions : {1: 100.0}
+Precision : 1.0, distributions : {1: 100.0}
+Precision : 1.0, distributions : {1: 100.0}
+Precision : 0.171875, distributions : {0: 86.71875, 1: 13.28125}
+Precision : 0.015625, distributions : {0: 100.0}
+Precision : 0.109375, distributions : {0: 100.0}
+Precision : 0.90625, distributions : {0: 100.0}
+Precision : 0.984375, distributions : {0: 100.0}
+Precision : 0.9453125, distributions : {0: 100.0}
+Precision : 0.9609375, distributions : {0: 100.0}
+Precision : 0.953125, distributions : {0: 100.0}
+Precision : 0.9765625, distributions : {0: 100.0}
+Precision : 0.9453125, distributions : {0: 100.0}
+```
+
+En conclusion : *el modelo es muy bueno prediciendo los casos negativos del valset pero muy malo prediciendo los casos negativos del testset*.
+
+Esto solamente se puede explicar como un problema de overfitting: el conjunto de test contiene imagenes para la clase negativa que tienen distribuciones y caracteristicas diferentes que las de validacion, el modelo no esta pudiendo generalizar del todo bien.
+
