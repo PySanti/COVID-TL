@@ -860,5 +860,5 @@ Precision : 0.9453125, distributions : {0: 100.0}
 
 En conclusion : *el modelo es muy bueno prediciendo los casos negativos del valset pero muy malo prediciendo los casos negativos del testset*.
 
-Esto solamente se puede explicar como un problema de overfitting: el conjunto de test contiene imagenes para la clase negativa que tienen distribuciones y caracteristicas diferentes que las de validacion, el modelo no esta pudiendo generalizar del todo bien.
+Se intentara resolver el problema a traves de tecnicas que reduzcan la influencia del desbalanceo de clases sobre la precision.
 

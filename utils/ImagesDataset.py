@@ -10,11 +10,14 @@ class ImagesDataset(Dataset):
         para ser usado con dataloader de entrenamiento,
         validacion y pruebas
     """
-    def __init__(self, X, Y, transformer) -> None:
+    def __init__(self, X, Y, train_transformer, val_transformer, train_dataset : bool, minority_class) -> None:
         super().__init__()
         self.X = X
         self.Y = Y
-        self.transformer = transformer
+        self.val_transformer = val_transformer
+        self.train_transformer = train_transformer
+        self.minority_class = minority_class
+        self.train_dataset = train_dataset
 
 
     def __len__(self):
@@ -22,6 +25,6 @@ class ImagesDataset(Dataset):
 
     def __getitem__(self,idx):
         image = Image.open(self.X[idx]).convert('RGB')
-        trans_image = self.transformer(image)
+        trans_image = self.train_transformer(image) if self.train_dataset else self.val_transformer(image)
         image.close()
         return trans_image, self.Y[idx]

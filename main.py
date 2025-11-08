@@ -1,11 +1,11 @@
 from numpy.matrixlib import test
+from sklearn.utils.class_weight import compute_class_weight
 import pandas as pd
 import kagglehub
 import time
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from utils.get_target_batch_dist import get_target_batch_dist
 from utils.load_dataset import load_dataset
 from utils.load_model import load_model
 from utils.ImagesDataset import ImagesDataset
@@ -20,23 +20,26 @@ if __name__ == "__main__":
     data_path = kagglehub.dataset_download("andyczhao/covidx-cxr2")
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    train_transformer  = transforms.Compose([
 
-        # basic resize
-        
-        transforms.Resize((IMAGE_SIZE[0], IMAGE_SIZE[1])), # redimensionar 
-        transforms.CenterCrop((IMAGE_SIZE[0]*0.9, IMAGE_SIZE[1]*0.9)), # recordar desde el centro para consistencia
-        
-        # data augmentation
+    train_transformer = transforms.Compose([
+        # Redimensionar y recorte aleatorio para romper consistencia espacial
+        transforms.Resize((IMAGE_SIZE[0], IMAGE_SIZE[1])),
+        transforms.RandomResizedCrop((int(IMAGE_SIZE[0]*0.9), int(IMAGE_SIZE[1]*0.9)), scale=(0.7, 1.0), ratio=(0.75, 1.33)),
 
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(0.4, 0.4, 0.4, 0.1),
-        transforms.RandomRotation(15),
 
+        # Augmentations agresivos
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.2),
+        transforms.RandomRotation(degrees=25),
+        transforms.ColorJitter(brightness=0.5, contrast=0.5, saturation=0.5, hue=0.2),
+
+        # Cutout (DropBlock espacial)
+#        transforms.RandomErasing(p=0.5, scale=(0.02, 0.2), ratio=(0.3, 3.3)),
 
         transforms.ToTensor(),
         transforms.Normalize(MEANS, STDS)
     ])
+
 
     val_transformer = transforms.Compose([
         transforms.Resize((IMAGE_SIZE[0], IMAGE_SIZE[1])), # redimensionar 
@@ -47,9 +50,26 @@ if __name__ == "__main__":
         transforms.Normalize(MEANS, STDS)
     ])
 
-    trainset = ImagesDataset(*load_dataset('train', data_path), train_transformer)
-    valset = ImagesDataset(*load_dataset('val', data_path), val_transformer)
-    testset = ImagesDataset(*load_dataset('test', data_path), val_transformer)
+    trainset = ImagesDataset(
+            *load_dataset('train', data_path), 
+            train_transformer=train_transformer, 
+            val_transformer=val_transformer,
+            train_dataset=True,
+            minority_class=0)
+
+    valset = ImagesDataset(
+            *load_dataset('val', data_path), 
+            train_transformer=train_transformer, 
+            val_transformer=val_transformer,
+            train_dataset=False,
+            minority_class=0)
+
+    testset = ImagesDataset(
+            *load_dataset('test', data_path), 
+            train_transformer=train_transformer, 
+            val_transformer=val_transformer,
+            train_dataset=False,
+            minority_class=0)
 
 
     trainloader = DataLoader(trainset, BATCH_SIZE, shuffle=True, num_workers=5, persistent_workers=True, pin_memory=True)
@@ -57,9 +77,12 @@ if __name__ == "__main__":
     testloader = DataLoader(testset, BATCH_SIZE, shuffle=False, num_workers=5, persistent_workers=True, pin_memory=True)
 
     model = load_model(2).to(DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
-    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-3)
+    weights = compute_class_weight('balanced', classes=np.unique(trainset.Y), y=trainset.Y)
+    criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1, weight=torch.Tensor(weights).to(DEVICE))
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max",patience=8)
+
+
 
     epochs_train_loss = []
     epochs_val_loss = []
